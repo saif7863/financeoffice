@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAC Finance Dashboard</title>
+<style>
+:root {
+  --green:  #1D9E75; --green-lt: #E1F5EE; --green-dk: #085041;
+  --blue:   #378ADD; --blue-lt:  #E6F1FB; --blue-dk:  #0C447C;
+  --amber:  #EF9F27; --amber-lt: #FAEEDA; --amber-dk: #633806;
+  --coral:  #D85A30; --coral-lt: #FAECE7; --coral-dk: #712B13;
+  --purple: #7F77DD; --purple-lt:#EEEDFE; --purple-dk:#3C3489;
+  --gray:   #888780; --gray-lt:  #F1EFE8; --gray-dk:  #2C2C2A;
+  --red:    #E24B4A; --red-lt:   #FCEBEB; --red-dk:   #501313;
+  --bg:     #F7F6F2;
+  --surface:#FFFFFF;
+  --border: rgba(0,0,0,0.1);
+  --text:   #1a1a18;
+  --muted:  #6b6b68;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+/* NAV */
+.nav { background: var(--surface); border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 0; padding: 0 20px; position: sticky; top: 0; z-index: 100; }
+.nav-logo { font-size: 15px; font-weight: 600; color: var(--green-dk); padding: 14px 20px 14px 0; border-right: 0.5px solid var(--border); margin-right: 4px; white-space: nowrap; }
+.nav-btn { padding: 14px 14px; font-size: 13px; color: var(--muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--green); border-bottom-color: var(--green); font-weight: 500; }
+
+/* LAYOUT */
+.page { display: none; padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* CARDS */
+.card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 14px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+
+/* GRID */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+
+/* METRIC CARDS */
+.metric { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.metric-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.metric-value { font-size: 22px; font-weight: 600; color: var(--text); }
+.metric-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.metric.green .metric-value { color: var(--green); }
+.metric.red .metric-value   { color: var(--red); }
+.metric.blue .metric-value  { color: var(--blue); }
+.metric.amber .metric-value { color: var(--amber); }
+
+/* FORMS */
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; display: block; }
+.form-label span { color: var(--red); }
+input, select, textarea { width: 100%; padding: 8px 11px; border: 0.5px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text); background: var(--surface); outline: none; transition: border-color 0.15s; font-family: inherit; }
+input:focus, select:focus, textarea:focus { border-color: var(--green); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+/* BUTTONS */
+.btn { padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn-primary { background: var(--green); color: white; }
+.btn-primary:hover { background: var(--green-dk); }
+.btn-secondary { background: var(--gray-lt); color: var(--gray-dk); }
+.btn-secondary:hover { background: #e0ded8; }
+.btn-danger { background: var(--red-lt); color: var(--red-dk); }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+.btn-icon { background: none; border: 0.5px solid var(--border); padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.btn-icon:hover { background: var(--gray-lt); }
+
+/* TAGS / PILLS */
+.pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.pill-green  { background: var(--green-lt);  color: var(--green-dk); }
+.pill-blue   { background: var(--blue-lt);   color: var(--blue-dk); }
+.pill-amber  { background: var(--amber-lt);  color: var(--amber-dk); }
+.pill-coral  { background: var(--coral-lt);  color: var(--coral-dk); }
+.pill-purple { background: var(--purple-lt); color: var(--purple-dk); }
+.pill-gray   { background: var(--gray-lt);   color: var(--gray-dk); }
+.pill-red    { background: var(--red-lt);    color: var(--red-dk); }
+
+/* TABLES */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); }
+.tbl td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); color: var(--text); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: var(--gray-lt); }
+.tbl .amount-pos { color: var(--green); font-weight: 500; }
+.tbl .amount-neg { color: var(--red);   font-weight: 500; }
+
+/* MASTER LIST ITEMS */
+.master-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; background: var(--surface); }
+.master-item-name { font-size: 13px; font-weight: 500; }
+.master-item-sub  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.master-actions { display: flex; gap: 6px; }
+
+/* FUND BARS */
+.fund-bar-wrap { margin-bottom: 14px; }
+.fund-bar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.fund-bar-name { font-size: 13px; font-weight: 500; }
+.fund-bar-amount { font-size: 12px; color: var(--muted); }
+.fund-bar-bg { background: var(--gray-lt); border-radius: 4px; height: 8px; overflow: hidden; }
+.fund-bar-fill { height: 8px; border-radius: 4px; transition: width 0.4s; }
+.fund-bar-stats { display: flex; gap: 16px; margin-top: 5px; }
+.fund-stat { font-size: 11px; color: var(--muted); }
+.fund-stat span { font-weight: 500; }
+
+/* SECTION TABS */
+.tabs { display: flex; gap: 4px; margin-bottom: 18px; background: var(--gray-lt); padding: 4px; border-radius: var(--radius); display: inline-flex; }
+.tab { padding: 6px 14px; border-radius: 7px; font-size: 13px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: inherit; transition: all 0.15s; }
+.tab.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+/* ALERTS */
+.alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 12px; display: flex; gap: 8px; align-items: flex-start; }
+.alert-warn  { background: #FFF8E6; border: 0.5px solid #F5C842; color: #7A5C00; }
+.alert-green { background: var(--green-lt); border: 0.5px solid var(--green); color: var(--green-dk); }
+.alert-red   { background: var(--red-lt);   border: 0.5px solid var(--red);   color: var(--red-dk); }
+
+/* ENTRY TYPE SELECTOR */
+.entry-types { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+.entry-type-btn { padding: 10px 8px; border: 1.5px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: center; font-size: 12px; font-weight: 500; color: var(--muted); background: var(--surface); transition: all 0.15s; font-family: inherit; }
+.entry-type-btn:hover { border-color: var(--green); color: var(--green); }
+.entry-type-btn.active { border-color: var(--green); background: var(--green-lt); color: var(--green-dk); }
+.entry-type-btn .et-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+/* REPORT SECTIONS */
+.report-section { margin-bottom: 20px; }
+.report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.report-title { font-size: 14px; font-weight: 600; }
+.report-total { font-size: 14px; font-weight: 600; }
+.report-line { display: flex; justify-content: space-between; padding: 7px 12px; font-size: 13px; border-radius: 6px; }
+.report-line:hover { background: var(--gray-lt); }
+.report-line.subtotal { border-top: 0.5px solid var(--border); font-weight: 600; background: var(--gray-lt); margin-top: 4px; }
+.report-line.total { background: var(--green-lt); font-weight: 700; font-size: 14px; color: var(--green-dk); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; }
+.report-line.total-neg { background: var(--red-lt); font-weight: 700; font-size: 14px; color: var(--red-dk); border-radius: var(--radius); padding: 10px 12px; margin-top: 8px; }
+
+/* DIVIDER */
+.divider { border: none; border-top: 0.5px solid var(--border); margin: 16px 0; }
+
+/* EMPTY STATE */
+.empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-icon { font-size: 32px; margin-bottom: 8px; }
+.empty-text { font-size: 14px; }
+.empty-sub  { font-size: 12px; margin-top: 4px; }
+
+/* DATE FILTER */
+.date-filter { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+.date-filter label { font-size: 12px; color: var(--muted); }
+.date-filter input { width: auto; }
+
+/* RESPONSIVE */
+@media(max-width:700px) {
+  .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
+  .form-row, .form-row3 { grid-template-columns: 1fr; }
+  .entry-types { grid-template-columns: repeat(2,1fr); }
+  .nav-btn { padding: 12px 10px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">GAC Finance</div>
+  <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+  <button class="nav-btn" onclick="showPage('entry')">Daily Entry</button>
+  <button class="nav-btn" onclick="showPage('reports')">Reports</button>
+  <button class="nav-btn" onclick="showPage('masters')">Masters</button>
+</nav>
+
+<!-- ==================== DASHBOARD ==================== -->
+<div id="page-dashboard" class="page active">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div>
+      <div style="font-size:20px;font-weight:600;">Good morning</div>
+      <div style="font-size:13px;color:var(--muted);" id="dash-date"></div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="setDashPeriod('day',this)">Today</button>
+      <button class="tab" onclick="setDashPeriod('week',this)">This week</button>
+      <button class="tab" onclick="setDashPeriod('month',this)">This month</button>
+    </div>
+  </div>
+
+  <div class="grid4" style="margin-bottom:14px;">
+    <div class="metric green">
+      <div class="metric-label">Total cash in</div>
+      <div class="metric-value" id="dash-in">₹0</div>
+      <div class="metric-sub">Income received</div>
+    </div>
+    <div class="metric red">
+      <div class="metric-label">Total cash out</div>
+      <div class="metric-value" id="dash-out">₹0</div>
+      <div class="metric-sub">Expenses paid</div>
+    </div>
+    <div class="metric blue">
+      <div class="metric-label">Net fund flow</div>
+      <div class="metric-value" id="dash-flow">₹0</div>
+      <div class="metric-sub">In minus out</div>
+    </div>
+    <div class="metric amber">
+      <div class="metric-label">Net profit</div>
+      <div class="metric-value" id="dash-profit">₹0</div>
+      <div class="metric-sub">Revenue minus costs</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Fund pool balances</div>
+      <div id="dash-funds-wrap"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent entries</div>
+      <div id="dash-recent"></div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">Income breakdown</div>
+      <div id="dash-income-breakdown"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Expense breakdown</div>
+      <div id="dash-expense-breakdown"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Alerts</div>
+      <div id="dash-alerts"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DAILY ENTRY ==================== -->
+<div id="page-entry" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="font-size:18px;font-weight:600;">Daily entry</div>
+    <button class="btn btn-secondary btn-sm" onclick="showPage('entry-log')">View all entries</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Select entry type</div>
+    <div class="entry-types">
+      <button class="entry-type-btn active" onclick="setEntryType('income',this)"><span class="et-icon">↑</span>Income</button>
+      <button class="entry-type-btn" onclick="setEntryType('expense',this)"><span class="et-icon">↓</span>Expense</button>
+      <button class="entry-type-btn" onclick="setEntryType('asset',this)"><span class="et-icon">🏗</span>Asset purchase</button>
+      <button class="entry-type-btn" onclick="setEntryType('liability',this)"><span class="et-icon">🏦</span>Loan / liability</button>
+      <button class="entry-type-btn" onclick="setEntryType('credit-sale',this)"><span class="et-icon">📋</span>Credit sale</button>
+      <button class="entry-type-btn" onclick="setEntryType('credit-purchase',this)"><span class="et-icon">📦</span>Credit purchase</button>
+      <button class="entry-type-btn" onclick="setEntryType('fund-transfer',this)"><span class="et-icon">⇄</span>Fund transfer</button>
+      <button class="entry-type-btn" onclick="setEntryType('bank-transfer',this)"><span class="et-icon">🔄</span>Bank transfer</button>
+    </div>
+  </div>
+
+  <div class="card" id="entry-form-card">
+    <div class="card-title" id="entry-form-title">Income entry</div>
+    <div id="entry-form-body"></div>
+    <div style="display:flex;gap:10px;margin-top:18px;">
+      <button class="btn btn-primary" onclick="saveEntry()">Save entry</button>
+      <button class="btn btn-secondary" onclick="clearEntryForm()">Clear</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Today's entries</div>
+    <div id="today-entries"></div>
+  </div>
+</div>
+
+<!-- ==================== ENTRY LOG ==================== -->
+<div id="page-entry-log" class="page">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+    <button class="btn btn-secondary btn-sm" onclick="showPage('entry')">← Back</button>
+    <div style="font-size:18px;font-weight:600;">All entries</div>
+  </div>
+  <div class="card">
+    <div class="date-filter">
+      <label>From</label>
+      <input type="date" id="log-from" style="width:150px">
+      <label>To</label>
+      <input type="date" id="log-to" style="width:150px">
+      <button class="btn btn-secondary btn-sm" onclick="filterLog()">Filter</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearLogFilter()">Clear</button>
+    </div>
+    <div id="all-entries-table"></div>
+  </div>
+</div>
+
+<!-- ==================== REPORTS ==================== -->
+<div id="page-reports" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="font-size:18px;font-weight:600;">Financial reports</div>
+    <div class="tabs">
+      <button class="tab active" onclick="setReportPeriod('day',this)">Daily</button>
+      <button class="tab" onclick="setReportPeriod('week',this)">Weekly</button>
+      <button class="tab" onclick="setReportPeriod('month',this)">Monthly</button>
+    </div>
+  </div>
+
+  <div class="date-filter" id="report-filter-wrap">
+    <div id="report-date-inputs"></div>
+    <label>Franchisee</label>
+    <select id="report-franchisee" style="width:180px" onchange="renderReports()"><option value="">All franchisees</option></select>
+    <label>Fund pool</label>
+    <select id="report-fund" style="width:160px" onchange="renderReports()"><option value="">All pools</option><option>Working capital</option><option>Visicooler</option><option>Machinery</option><option>Raw material</option></select>
+  </div>
+
+  <div class="grid3">
+    <!-- Fund Flow -->
+    <div class="card">
+      <div class="card-title">Fund flow report</div>
+      <div id="report-ff"></div>
+    </div>
+    <!-- P&L -->
+    <div class="card">
+      <div class="card-title">Profit &amp; loss</div>
+      <div id="report-pl"></div>
+    </div>
+    <!-- Balance Sheet -->
+    <div class="card">
+      <div class="card-title">Balance sheet</div>
+      <div id="report-bs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MASTERS ==================== -->
+<div id="page-masters" class="page">
+  <div style="font-size:18px;font-weight:600;margin-bottom:18px;">Master settings</div>
+
+  <div class="tabs" style="margin-bottom:18px;flex-wrap:wrap;">
+    <button class="tab active" onclick="setMasterTab('franchisees',this)">Franchisees</button>
+    <button class="tab" onclick="setMasterTab('income-types',this)">Income types</button>
+    <button class="tab" onclick="setMasterTab('expense-types',this)">Expense types</button>
+    <button class="tab" onclick="setMasterTab('asset-types',this)">Asset types</button>
+    <button class="tab" onclick="setMasterTab('liability-types',this)">Liability types</button>
+    <button class="tab" onclick="setMasterTab('customers',this)">Customers</button>
+    <button class="tab" onclick="setMasterTab('suppliers',this)">Suppliers</button>
+    <button class="tab" onclick="setMasterTab('bank-accounts',this)">Bank accounts</button>
+  </div>
+
+  <div id="master-content"></div>
+</div>
+
+<script>
+// ===================== DATA STORE =====================
+const DB = {
+  entries: [
+    { id:'e001', date:'2026-06-19', type:'income',    category:'Profit sharing',  fund:'Working capital', franchisee:'Rajesh Kumar - Thiruvallur', amount:500000, gst:0,     cogs:0, note:'Profit share June 2026', bank:'Working capital account' },
+    { id:'e002', date:'2026-06-19', type:'liability', category:'Director loan',   fund:'Working capital', franchisee:'Rajesh Kumar - Thiruvallur', amount:1000000, gst:0,   cogs:0, note:'Loan for operations', bank:'Working capital account', subtype:'received', party:'Director' },
+    { id:'e003', date:'2026-06-19', type:'asset',     category:'Mobile phone',    fund:'Working capital', franchisee:'Rajesh Kumar - Thiruvallur', amount:10000,  gst:0,    cogs:0, note:'Samsung Galaxy A54', bank:'Working capital account', desc:'Samsung Galaxy A54' },
+    { id:'e004', date:'2026-06-19', type:'expense',   category:'Salary',          fund:'Working capital', franchisee:'Rajesh Kumar - Thiruvallur', amount:40000,  gst:0,    cogs:0, note:'June 2026 salary', bank:'Working capital account', isDrawing:false }
+  ],
+  masters: {
+    franchisees: [
+      { id:'f001', name:'Rajesh Kumar - Thiruvallur', phone:'9876543210', location:'Thiruvallur' }
+    ],
+    incomeTypes: [
+      { id:'it1', name:'Product / raw material sales', desc:'Selling raw materials to franchisees' },
+      { id:'it2', name:'Flavor royalty', desc:'Royalty on essence/flavor sales' },
+      { id:'it3', name:'Profit sharing', desc:'50-50 profit share from franchisees' },
+      { id:'it4', name:'Sales office salary reimbursement', desc:'Salary reimbursement from franchisee' },
+      { id:'it5', name:'Service income', desc:'Any service-based income' },
+      { id:'it6', name:'Other income', desc:'Miscellaneous income' }
+    ],
+    expenseTypes: [
+      { id:'et1', name:'Salary', desc:'Employee salaries and wages' },
+      { id:'et2', name:'Rent', desc:'Office / warehouse rent' },
+      { id:'et3', name:'Electricity', desc:'Electricity and utilities' },
+      { id:'et4', name:'Marketing', desc:'Marketing and promotion' },
+      { id:'et5', name:'Travel', desc:'Travel and conveyance' },
+      { id:'et6', name:'Infrastructure', desc:'Office maintenance and infrastructure' },
+      { id:'et7', name:'Other expense', desc:'Miscellaneous expenses' }
+    ],
+    assetTypes: [
+      { id:'ast1', name:'Mobile phone',    depr: 33 },
+      { id:'ast2', name:'Laptop / computer', depr: 25 },
+      { id:'ast3', name:'Vehicle',          depr: 20 },
+      { id:'ast4', name:'Machinery',        depr: 15 },
+      { id:'ast5', name:'Furniture',        depr: 10 },
+      { id:'ast6', name:'Office equipment', depr: 20 }
+    ],
+    liabilityTypes: [
+      { id:'lt1', name:'Bank loan',      desc:'Loan from bank' },
+      { id:'lt2', name:'Director loan',  desc:'Loan from director/owner' },
+      { id:'lt3', name:'Vehicle loan',   desc:'Loan for vehicle purchase' },
+      { id:'lt4', name:'NBFC loan',      desc:'Loan from NBFC' },
+      { id:'lt5', name:'Other liability',desc:'Other liabilities' }
+    ],
+    customers: [
+      { id:'c1', name:'Walk-in / cash customer', gstin:'' }
+    ],
+    suppliers: [],
+    bankAccounts: [
+      { id:'ba1', name:'Working capital account', type:'Working capital', opening: 0 },
+      { id:'ba2', name:'Visicooler account',       type:'Visicooler',       opening: 0 },
+      { id:'ba3', name:'Machinery account',        type:'Machinery',        opening: 0 },
+      { id:'ba4', name:'Raw material account',     type:'Raw material',     opening: 0 },
+      { id:'ba5', name:'Petty cash',               type:'Cash',             opening: 0 }
+    ]
+  }
+};
+
+const FUNDS = ['Working capital','Visicooler','Machinery','Raw material'];
+const FUND_COLORS = { 'Working capital':'green','Visicooler':'blue','Machinery':'amber','Raw material':'coral' };
+
+let currentPage = 'dashboard';
+let currentEntryType = 'income';
+let currentMasterTab = 'franchisees';
+let reportPeriod = 'day';
+let dashPeriod = 'day';
+
+// ===================== UTILS =====================
+function fmt(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function getDateRange(period, ref){
+  const d = ref ? new Date(ref) : new Date();
+  if(period === 'day'){
+    const s = ref || today();
+    return { start: s, end: s };
+  }
+  if(period === 'week'){
+    const day = d.getDay() || 7;
+    const mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+    const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+    return { start: mon.toISOString().split('T')[0], end: sat.toISOString().split('T')[0] };
+  }
+  if(period === 'month'){
+    const s = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    const e = new Date(d.getFullYear(), d.getMonth()+1, 0).toISOString().split('T')[0];
+    return { start: s, end: e };
+  }
+}
+
+function filterEntries(period, ref){
+  const { start, end } = getDateRange(period, ref);
+  return DB.entries.filter(e => e.date >= start && e.date <= end);
+}
+
+// ===================== NAVIGATION =====================
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const pages = ['dashboard','entry','reports','masters'];
+  const navBtns = document.querySelectorAll('.nav-btn');
+  pages.forEach((p,i) => { if(p === id) navBtns[i].classList.add('active'); });
+  currentPage = id;
+  if(id === 'dashboard') renderDashboard();
+  if(id === 'entry'){ renderEntryForm(); renderTodayEntries(); }
+  if(id === 'entry-log') renderEntryLog();
+  if(id === 'reports'){ renderDateInputs(); renderReports(); }
+
+  if(id === 'masters') renderMasters();
+}
+
+// ===================== DASHBOARD =====================
+function setDashPeriod(p, btn){
+  dashPeriod = p;
+  document.querySelectorAll('#page-dashboard .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
+function renderDashboard(){
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN',{ weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const entries = filterEntries(dashPeriod);
+
+  let cashIn=0, cashOut=0, revenue=0, cogs=0, expenses=0;
+  const incomeByType = {}, expenseByType = {};
+
+  entries.forEach(e => {
+    if(e.type === 'income'){
+      cashIn += +e.amount || 0;
+      revenue += +e.amount || 0;
+      cogs += +e.cogs || 0;
+      incomeByType[e.category] = (incomeByType[e.category]||0) + (+e.amount||0);
+    }
+    if(e.type === 'expense'){
+      cashOut += +e.amount || 0;
+      expenses += +e.amount || 0;
+      expenseByType[e.category] = (expenseByType[e.category]||0) + (+e.amount||0);
+    }
+    if(e.type === 'asset'){
+      cashOut += +e.amount || 0;
+      expenses += +e.amount || 0;
+      expenseByType[e.category||'Asset purchase'] = (expenseByType[e.category||'Asset purchase']||0) + (+e.amount||0);
+    }
+    if(e.type === 'liability' && e.subtype === 'received') cashIn += +e.amount || 0;
+    if(e.type === 'liability' && e.subtype === 'repaid')   cashOut += +e.amount || 0;
+    if(e.type === 'credit-sale') revenue += +e.amount || 0;
+  });
+
+  const flow   = cashIn - cashOut;
+  const profit = revenue - cogs - expenses;
+
+  document.getElementById('dash-in').textContent     = fmt(cashIn);
+  document.getElementById('dash-out').textContent    = fmt(cashOut);
+  document.getElementById('dash-flow').textContent   = fmt(flow);
+  document.getElementById('dash-profit').textContent = fmt(profit);
+  document.getElementById('dash-flow').style.color   = flow >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('dash-profit').style.color = profit >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Fund pool statements
+  const fw = document.getElementById('dash-funds-wrap');
+  const fundTotals = getFundTotals();
+  const hasAnyEntry = DB.entries.some(e => e.fund);
+  if(!hasAnyEntry){
+    fw.innerHTML = '<div class="empty"><div class="empty-text">No fund entries yet</div><div class="empty-sub">Tag entries to a fund pool in Daily Entry</div></div>';
+  } else {
+    fw.innerHTML = FUNDS.map(f => {
+      const ft = fundTotals[f] || { opening:0, income:0, expense:0 };
+      const closing = ft.opening + ft.income - ft.expense;
+      const clr = FUND_COLORS[f];
+      const pct = ft.income > 0 ? Math.min(100, (ft.expense / ft.income) * 100) : (ft.expense > 0 ? 100 : 0);
+      return `<div style="background:var(--gray-lt);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:600;color:var(--${clr}-dk||var(--text))">${f}</span>
+          <span style="font-size:13px;font-weight:600;color:${closing >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(closing)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:3px;">
+          <span>Opening balance</span><span>₹0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--green);margin-bottom:3px;">
+          <span>+ Income / receipts</span><span>${fmt(ft.income)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--red);margin-bottom:6px;">
+          <span>− Expenses / payments</span><span>${fmt(ft.expense)}</span>
+        </div>
+        <div style="border-top:0.5px solid var(--border);padding-top:6px;display:flex;justify-content:space-between;font-size:12px;font-weight:600;">
+          <span>Closing balance</span>
+          <span style="color:${closing >= 0 ? 'var(--green)' : 'var(--red)'}">${closing < 0 ? '⚠ ' : ''}${fmt(closing)}</span>
+        </div>
+        <div style="margin-top:6px;background:var(--border);border-radius:4px;height:4px;overflow:hidden;">
+          <div style="width:${pct}%;height:4px;background:var(--${clr});border-radius:4px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Recent entries
+  const recent = [...DB.entries].sort((a,b) => b.date.localeCompare(a.date)).slice(0,5);
+  const re = document.getElementById('dash-recent');
+  if(recent.length === 0){ re.innerHTML = '<div class="empty"><div class="empty-text">No entries yet</div></div>'; }
+  else re.innerHTML = recent.map(e => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:500">${e.category || e.type}</div>
+        <div style="font-size:11px;color:var(--muted)">${e.date} · ${e.fund || 'General'}</div>
+      </div>
+      <div class="${['income','credit-sale'].includes(e.type)?'amount-pos':'amount-neg'}" style="font-weight:500;font-size:13px">${['income','credit-sale'].includes(e.type)?'+':'-'}${fmt(e.amount||0)}</div>
+    </div>`).join('');
+
+  // Income breakdown
+  const ib = document.getElementById('dash-income-breakdown');
+  const ikeys = Object.keys(incomeByType);
+  ib.innerHTML = ikeys.length === 0 ? '<div class="empty"><div class="empty-text">No income entries</div></div>' :
+    ikeys.map(k => `<div class="report-line"><span>${k}</span><span style="color:var(--green);font-weight:500">${fmt(incomeByType[k])}</span></div>`).join('');
+
+  // Expense breakdown
+  const eb = document.getElementById('dash-expense-breakdown');
+  const ekeys = Object.keys(expenseByType);
+  eb.innerHTML = ekeys.length === 0 ? '<div class="empty"><div class="empty-text">No expense entries</div></div>' :
+    ekeys.map(k => `<div class="report-line"><span>${k}</span><span style="color:var(--red);font-weight:500">${fmt(expenseByType[k])}</span></div>`).join('');
+
+  // Alerts
+  const alerts = document.getElementById('dash-alerts');
+  const alertList = [];
+  const ft2 = getFundTotals();
+  FUNDS.forEach(f => {
+    const fd = ft2[f];
+    if(!fd) return;
+    const closing = fd.opening + fd.income - fd.expense;
+    if(fd.income > 0 && closing / fd.income < 0.2){
+      alertList.push(`<div class="alert alert-warn">⚠ ${f} fund low — only ${fmt(closing)} remaining</div>`);
+    }
+    if(closing < 0){
+      alertList.push(`<div class="alert alert-red">⚠ ${f} fund overspent by ${fmt(Math.abs(closing))}</div>`);
+    }
+  });
+  if(flow < 0) alertList.push(`<div class="alert alert-red">⚠ Negative fund flow — cash out exceeds cash in</div>`);
+  if(alertList.length === 0) alertList.push('<div class="alert alert-green">✓ All funds healthy</div>');
+  alerts.innerHTML = alertList.join('');
+}
+
+// ===================== FUND TOTALS =====================
+function getFundTotals(){
+  const totals = {};
+  FUNDS.forEach(f => totals[f] = { opening:0, income:0, expense:0 });
+  DB.entries.forEach(e => {
+    if(!e.fund || !totals[e.fund]) return;
+    const amt = +(e.amount||0);
+    if(e.type === 'income' || e.type === 'credit-sale'){
+      totals[e.fund].income += amt;
+    }
+    if(e.type === 'liability' && e.subtype === 'received'){
+      totals[e.fund].income += amt;
+    }
+    if(e.type === 'expense' || e.type === 'asset'){
+      totals[e.fund].expense += amt;
+    }
+    if(e.type === 'fund-transfer'){
+      totals[e.fund].expense += amt;
+      if(e.toFund && totals[e.toFund]) totals[e.toFund].income += amt;
+    }
+  });
+  return totals;
+}
+
+// ===================== ENTRY FORM =====================
+function setEntryType(type, btn){
+  currentEntryType = type;
+  document.querySelectorAll('.entry-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderEntryForm();
+}
+
+function renderEntryForm(){
+  const titles = {
+    income:'Income entry', expense:'Expense entry', asset:'Asset purchase',
+    liability:'Loan / liability', 'credit-sale':'Credit sale',
+    'credit-purchase':'Credit purchase', 'fund-transfer':'Inter-fund transfer',
+    'bank-transfer':'Bank transfer'
+  };
+  document.getElementById('entry-form-title').textContent = titles[currentEntryType] || 'Entry';
+
+  const franchiseeOpts = DB.masters.franchisees.map(f => `<option>${f.name}</option>`).join('');
+  const incomeOpts  = DB.masters.incomeTypes.map(t => `<option>${t.name}</option>`).join('');
+  const expOpts     = DB.masters.expenseTypes.map(t => `<option>${t.name}</option>`).join('');
+  const assetOpts   = DB.masters.assetTypes.map(t => `<option value="${t.name}">${t.name} (${t.depr}% depr/yr)</option>`).join('');
+  const liabOpts    = DB.masters.liabilityTypes.map(t => `<option>${t.name}</option>`).join('');
+  const custOpts    = DB.masters.customers.map(c => `<option>${c.name}</option>`).join('');
+  const suppOpts    = DB.masters.suppliers.map(s => `<option>${s.name}</option>`).join('');
+  const bankOpts    = DB.masters.bankAccounts.map(b => `<option>${b.name}</option>`).join('');
+  const fundOpts    = FUNDS.map(f => `<option>${f}</option>`).join('');
+
+  const dateRow = `<div class="form-group"><label class="form-label">Date <span>*</span></label><input type="date" id="e-date" value="${today()}"></div>`;
+  const fundRow = `<div class="form-group"><label class="form-label">Fund pool <span>*</span></label><select id="e-fund"><option value="">— Select fund —</option>${fundOpts}</select></div>`;
+  const noteRow = `<div class="form-group"><label class="form-label">Notes / reference</label><input type="text" id="e-note" placeholder="Invoice no., party name, remarks..."></div>`;
+  const franchiseeRow = `<div class="form-group"><label class="form-label">Franchisee</label><select id="e-franchisee"><option value="">— Company / General —</option>${franchiseeOpts}</select></div>`;
+  const bankRow = `<div class="form-group"><label class="form-label">Received in / paid from</label><select id="e-bank"><option value="">— Select account —</option>${bankOpts}</select></div>`;
+
+  let html = '';
+
+  if(currentEntryType === 'income'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Income type <span>*</span></label><select id="e-cat"><option value="">— Select type —</option>${incomeOpts}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">GST amount (₹)</label><input type="number" id="e-gst" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Cost of goods sold (₹)</label><input type="number" id="e-cogs" placeholder="0 if no product cost"></div>
+        ${bankRow}
+      </div>
+      <div class="form-row">${franchiseeRow}${fundRow}</div>
+      ${noteRow}`;
+  }
+
+  else if(currentEntryType === 'expense'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Expense type <span>*</span></label><select id="e-cat"><option value="">— Select type —</option>${expOpts}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">GST paid (₹)</label><input type="number" id="e-gst" placeholder="0"></div>
+      </div>
+      <div class="form-row">${fundRow}${bankRow}</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Owner drawings?</label><select id="e-drawing"><option value="no">No — regular expense</option><option value="yes">Yes — owner drawings (goes to equity)</option></select></div>
+        ${franchiseeRow}
+      </div>
+      ${noteRow}`;
+  }
+
+  else if(currentEntryType === 'asset'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Asset type <span>*</span></label><select id="e-cat"><option value="">— Select asset —</option>${assetOpts}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Purchase amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">GST paid (₹)</label><input type="number" id="e-gst" placeholder="0"></div>
+      </div>
+      <div class="form-row">${fundRow}${bankRow}</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Description / serial no.</label><input type="text" id="e-desc" placeholder="e.g. Samsung Galaxy A54, SN:12345"></div>
+        ${franchiseeRow}
+      </div>
+      ${noteRow}`;
+  }
+
+  else if(currentEntryType === 'liability'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Transaction <span>*</span></label><select id="e-subtype"><option value="received">Loan received (liability increases)</option><option value="repaid">Loan repaid (liability reduces)</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Liability type <span>*</span></label><select id="e-cat"><option value="">— Select type —</option>${liabOpts}</select></div>
+        <div class="form-group"><label class="form-label">Amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Lender / bank name</label><input type="text" id="e-party" placeholder="e.g. HDFC Bank"></div>
+        ${bankRow}
+      </div>
+      <div class="form-row">${franchiseeRow}${fundRow}</div>
+      ${noteRow}`;
+  }
+
+  else if(currentEntryType === 'credit-sale'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Customer <span>*</span></label><select id="e-cat"><option value="">— Select customer —</option>${custOpts}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Invoice amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">GST amount (₹)</label><input type="number" id="e-gst" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Cost of goods (₹)</label><input type="number" id="e-cogs" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Due date</label><input type="date" id="e-due"></div>
+      </div>
+      <div class="form-row">${franchiseeRow}${fundRow}</div>
+      ${noteRow}
+      <div class="alert alert-warn" style="margin-top:8px">⚠ This creates a receivable in balance sheet. When customer pays, enter as Income → select "Cash collected against credit sale".</div>`;
+  }
+
+  else if(currentEntryType === 'credit-purchase'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Supplier <span>*</span></label><select id="e-cat"><option value="">— Select supplier —</option>${suppOpts || '<option>No suppliers added</option>'}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Purchase amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">GST paid (₹)</label><input type="number" id="e-gst" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Due date</label><input type="date" id="e-due"></div>
+        ${fundRow}
+      </div>
+      <div class="form-row">${franchiseeRow}${fundRow}</div>
+      ${noteRow}
+      <div class="alert alert-warn" style="margin-top:8px">⚠ This adds to stock inventory (asset) and creates a payable (liability). When you pay the supplier, enter as Expense → Supplier payment.</div>`;
+  }
+
+  else if(currentEntryType === 'fund-transfer'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">From fund <span>*</span></label><select id="e-from-fund"><option value="">— Select —</option>${fundOpts}</select></div>
+        <div class="form-group"><label class="form-label">To fund <span>*</span></label><select id="e-to-fund"><option value="">— Select —</option>${fundOpts}</select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Reason <span>*</span></label><input type="text" id="e-note" placeholder="e.g. Working capital shortfall — borrowed from Visicooler fund"></div>
+      <div class="alert alert-warn" style="margin-top:8px">⚠ This records the leakage between funds. It will show in the fund utilisation report as inter-fund borrowing.</div>`;
+  }
+
+  else if(currentEntryType === 'bank-transfer'){
+    html = `
+      <div class="form-row">${dateRow}
+        <div class="form-group"><label class="form-label">Amount (₹) <span>*</span></label><input type="number" id="e-amount" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">From account <span>*</span></label><select id="e-from-bank"><option value="">— Select —</option>${bankOpts}</select></div>
+        <div class="form-group"><label class="form-label">To account <span>*</span></label><select id="e-to-bank"><option value="">— Select —</option>${bankOpts}</select></div>
+      </div>
+      ${noteRow}
+      <div class="alert alert-green" style="margin-top:8px">✓ This is an internal transfer — not counted as income or expense. Only updates account balances.</div>`;
+  }
+
+  document.getElementById('entry-form-body').innerHTML = html;
+}
+
+function saveEntry(){
+  const date = (document.getElementById('e-date')?.value) || today();
+  const amount = parseFloat(document.getElementById('e-amount')?.value || 0);
+  const gst    = parseFloat(document.getElementById('e-gst')?.value   || 0);
+  const cogs   = parseFloat(document.getElementById('e-cogs')?.value  || 0);
+  const cat    = document.getElementById('e-cat')?.value || '';
+  const fund   = document.getElementById('e-fund')?.value || '';
+  const note   = document.getElementById('e-note')?.value || '';
+  const bank   = document.getElementById('e-bank')?.value || '';
+
+  if(currentEntryType === 'fund-transfer'){
+    const fromF = document.getElementById('e-from-fund')?.value;
+    const toF   = document.getElementById('e-to-fund')?.value;
+    if(!amount || !fromF || !toF){ alert('Please fill all required fields.'); return; }
+    DB.entries.push({ id:uid(), date, type:'fund-transfer', amount, fund:fromF, toFund:toF, note, category: `Transfer: ${fromF} → ${toF}` });
+    showToast('Fund transfer recorded');
+    clearEntryForm(); renderTodayEntries(); renderDashboard(); return;
+  }
+
+  if(currentEntryType === 'bank-transfer'){
+    const fromB = document.getElementById('e-from-bank')?.value;
+    const toB   = document.getElementById('e-to-bank')?.value;
+    if(!amount || !fromB || !toB){ alert('Please fill all required fields.'); return; }
+    DB.entries.push({ id:uid(), date, type:'bank-transfer', amount, fromBank:fromB, toBank:toB, note, category:`${fromB} → ${toB}` });
+    showToast('Bank transfer recorded');
+    clearEntryForm(); renderTodayEntries(); renderDashboard(); return;
+  }
+
+  if(!amount){ alert('Please enter an amount.'); return; }
+
+  const franchisee = document.getElementById('e-franchisee')?.value || '';
+  const entry = { id:uid(), date, type:currentEntryType, amount, gst, cogs, category:cat, fund, note, bank, franchisee };
+
+  if(currentEntryType === 'expense'){
+    entry.isDrawing = document.getElementById('e-drawing')?.value === 'yes';
+  }
+  if(currentEntryType === 'liability'){
+    entry.subtype = document.getElementById('e-subtype')?.value;
+    entry.party   = document.getElementById('e-party')?.value || '';
+  }
+  if(['credit-sale','credit-purchase'].includes(currentEntryType)){
+    entry.due = document.getElementById('e-due')?.value || '';
+  }
+  if(currentEntryType === 'asset'){
+    entry.desc = document.getElementById('e-desc')?.value || '';
+  }
+
+  DB.entries.push(entry);
+  showToast('Entry saved successfully');
+  clearEntryForm(); renderTodayEntries();
+  if(currentPage === 'dashboard') renderDashboard();
+}
+
+function clearEntryForm(){ renderEntryForm(); }
+
+function renderTodayEntries(){
+  const todayEntries = DB.entries.filter(e => e.date === today()).sort((a,b) => b.id.localeCompare(a.id));
+  const wrap = document.getElementById('today-entries');
+  if(todayEntries.length === 0){ wrap.innerHTML = '<div class="empty"><div class="empty-text">No entries today yet</div></div>'; return; }
+
+  wrap.innerHTML = `<table class="tbl">
+    <thead><tr><th>Type</th><th>Category</th><th>Franchisee</th><th>Fund</th><th>Amount</th><th>GST</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${todayEntries.map(e => `
+      <tr>
+        <td><span class="pill ${pillClass(e.type)}">${e.type}</span></td>
+        <td>${e.category || '—'}</td>
+        <td>${e.fund || '—'}</td>
+        <td style="color:var(--muted)">${e.franchisee||'—'}</td>
+        <td class="${['income','credit-sale'].includes(e.type)?'amount-pos':'amount-neg'}">${fmt(e.amount||0)}</td>
+        <td>${e.gst ? fmt(e.gst) : '—'}</td>
+        <td style="color:var(--muted)">${e.note || '—'}</td>
+        <td><button class="btn-icon" onclick="deleteEntry('${e.id}')">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function deleteEntry(id){
+  if(!confirm('Delete this entry?')) return;
+  DB.entries = DB.entries.filter(e => e.id !== id);
+  renderTodayEntries();
+  renderDashboard();
+}
+
+function pillClass(type){
+  const map = { income:'pill-green', expense:'pill-red', asset:'pill-amber', liability:'pill-blue', 'credit-sale':'pill-purple', 'credit-purchase':'pill-coral', 'fund-transfer':'pill-gray', 'bank-transfer':'pill-gray' };
+  return map[type] || 'pill-gray';
+}
+
+// ===================== ENTRY LOG =====================
+function renderEntryLog(from, to){
+  let entries = [...DB.entries].sort((a,b) => b.date.localeCompare(a.date));
+  if(from && to) entries = entries.filter(e => e.date >= from && e.date <= to);
+  const wrap = document.getElementById('all-entries-table');
+  if(entries.length === 0){ wrap.innerHTML = '<div class="empty"><div class="empty-text">No entries found</div></div>'; return; }
+  wrap.innerHTML = `<table class="tbl">
+    <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Fund</th><th>Amount</th><th>GST</th><th>COGS</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${entries.map(e => `
+      <tr>
+        <td>${e.date}</td>
+        <td><span class="pill ${pillClass(e.type)}">${e.type}</span></td>
+        <td>${e.category||'—'}</td>
+        <td>${e.fund||'—'}</td>
+        <td class="${['income','credit-sale'].includes(e.type)?'amount-pos':'amount-neg'}">${fmt(e.amount||0)}</td>
+        <td>${e.gst?fmt(e.gst):'—'}</td>
+        <td>${e.cogs?fmt(e.cogs):'—'}</td>
+        <td style="color:var(--muted)">${e.note||'—'}</td>
+        <td><button class="btn-icon" onclick="deleteEntry('${e.id}')">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function filterLog(){
+  const from = document.getElementById('log-from').value;
+  const to   = document.getElementById('log-to').value;
+  renderEntryLog(from, to);
+}
+function clearLogFilter(){
+  document.getElementById('log-from').value = '';
+  document.getElementById('log-to').value   = '';
+  renderEntryLog();
+}
+
+// ===================== REPORTS =====================
+function setReportPeriod(p, btn){
+  reportPeriod = p;
+  document.querySelectorAll('#page-reports .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDateInputs();
+  renderReports();
+}
+
+function renderDateInputs(){
+  const wrap = document.getElementById('report-date-inputs');
+  if(!wrap) return;
+  if(reportPeriod === 'day'){
+    wrap.innerHTML = `<label style="font-size:12px;color:var(--muted)">Date</label>
+      <input type="date" id="report-date" value="${today()}" style="width:160px" oninput="renderReports()">`;
+  } else if(reportPeriod === 'week'){
+    const mon = getWeekStart(today());
+    const sat = getWeekEnd(mon);
+    wrap.innerHTML = `<label style="font-size:12px;color:var(--muted)">From</label>
+      <input type="date" id="report-from" value="${mon}" style="width:150px" oninput="renderReports()">
+      <label style="font-size:12px;color:var(--muted)">To</label>
+      <input type="date" id="report-to" value="${sat}" style="width:150px" oninput="renderReports()">`;
+  } else if(reportPeriod === 'month'){
+    const curYear  = new Date().getFullYear();
+    const curMonth = new Date().getMonth() + 1;
+    const years  = [2022,2023,2024,2025,2026,2027].map(y =>
+      `<option value="${y}" ${y===curYear?'selected':''}>${y}</option>`).join('');
+    const months = [
+      ['January',1],['February',2],['March',3],['April',4],
+      ['May',5],['June',6],['July',7],['August',8],
+      ['September',9],['October',10],['November',11],['December',12]
+    ].map(([name,n]) =>
+      `<option value="${String(n).padStart(2,'0')}" ${n===curMonth?'selected':''}>${name}</option>`
+    ).join('');
+    wrap.innerHTML = `
+      <label style="font-size:12px;color:var(--muted)">Year</label>
+      <select id="report-year" style="width:110px" onchange="renderReports()">${years}</select>
+      <label style="font-size:12px;color:var(--muted)">Month</label>
+      <select id="report-month-sel" style="width:130px" onchange="renderReports()">${months}</select>`;
+  }
+}
+
+function getWeekStart(d){
+  const dt = new Date(d);
+  const day = dt.getDay() || 7;
+  dt.setDate(dt.getDate() - day + 1);
+  return dt.toISOString().split('T')[0];
+}
+function getWeekEnd(monStr){
+  const dt = new Date(monStr);
+  dt.setDate(dt.getDate() + 5);
+  return dt.toISOString().split('T')[0];
+}
+
+function renderReports(){
+  const franchiseeFilter = document.getElementById('report-franchisee')?.value || '';
+  const fundFilter = document.getElementById('report-fund')?.value || '';
+  const rfd = document.getElementById('report-franchisee');
+  if(rfd){ rfd.innerHTML = '<option value="">All franchisees</option>' + DB.masters.franchisees.map(f=>`<option>${f.name}</option>`).join(''); rfd.value = franchiseeFilter; }
+
+  let start, end;
+  if(reportPeriod === 'day'){
+    const d = document.getElementById('report-date')?.value || today();
+    start = d; end = d;
+  } else if(reportPeriod === 'week'){
+    start = document.getElementById('report-from')?.value || getWeekStart(today());
+    end   = document.getElementById('report-to')?.value   || getWeekEnd(start);
+  } else if(reportPeriod === 'month'){
+    const yr = parseInt(document.getElementById('report-year')?.value || new Date().getFullYear());
+    const mo = parseInt(document.getElementById('report-month-sel')?.value || (new Date().getMonth()+1));
+    start = `${yr}-${String(mo).padStart(2,'0')}-01`;
+    end   = new Date(yr, mo, 0).toISOString().split('T')[0];
+  }
+
+  let entries = DB.entries.filter(e => e.date >= start && e.date <= end);
+  if(franchiseeFilter) entries = entries.filter(e => e.franchisee === franchiseeFilter);
+  if(fundFilter) entries = entries.filter(e => e.fund === fundFilter);
+
+  // ---- FUND FLOW ----
+  let ffIn=0, ffOut=0;
+  const ffInLines={}, ffOutLines={};
+
+  entries.forEach(e => {
+    if(e.type === 'income'){
+      ffIn += +e.amount||0;
+      ffInLines[e.category] = (ffInLines[e.category]||0) + (+e.amount||0);
+    }
+    if(e.type === 'expense' && !e.isDrawing){
+      ffOut += +e.amount||0;
+      ffOutLines[e.category] = (ffOutLines[e.category]||0) + (+e.amount||0);
+    }
+    if(e.type === 'asset'){ ffOut += +e.amount||0; ffOutLines['Asset purchase'] = (ffOutLines['Asset purchase']||0) + (+e.amount||0); }
+    if(e.type === 'liability' && e.subtype==='received'){ ffIn  += +e.amount||0; ffInLines['Loan received'] = (ffInLines['Loan received']||0) + (+e.amount||0); }
+    if(e.type === 'liability' && e.subtype==='repaid'  ){ ffOut += +e.amount||0; ffOutLines['Loan repaid']  = (ffOutLines['Loan repaid']||0)  + (+e.amount||0); }
+  });
+  const ffNet = ffIn - ffOut;
+
+  document.getElementById('report-ff').innerHTML = `
+    <div class="report-section">
+      <div class="report-header"><span class="report-title" style="color:var(--green)">Cash inflow</span><span class="report-total" style="color:var(--green)">${fmt(ffIn)}</span></div>
+      ${Object.entries(ffInLines).map(([k,v])=>`<div class="report-line"><span>${k}</span><span>${fmt(v)}</span></div>`).join('')||'<div style="color:var(--muted);font-size:12px;padding:6px 12px">No income entries</div>'}
+    </div>
+    <div class="report-section">
+      <div class="report-header"><span class="report-title" style="color:var(--red)">Cash outflow</span><span class="report-total" style="color:var(--red)">${fmt(ffOut)}</span></div>
+      ${Object.entries(ffOutLines).map(([k,v])=>`<div class="report-line"><span>${k}</span><span>${fmt(v)}</span></div>`).join('')||'<div style="color:var(--muted);font-size:12px;padding:6px 12px">No expense entries</div>'}
+    </div>
+    <div class="report-line ${ffNet>=0?'total':'total-neg'}"><span>Net fund flow</span><span>${fmt(ffNet)}</span></div>`;
+
+  // ---- P&L ----
+  let revenue=0, cogs=0, grossProfit=0, totalExp=0;
+  const revLines={}, expLines={};
+
+  entries.forEach(e => {
+    if(e.type === 'income'){
+      revenue += +e.amount||0;
+      cogs    += +e.cogs||0;
+      revLines[e.category] = (revLines[e.category]||0) + (+e.amount||0);
+    }
+    if(e.type === 'credit-sale'){
+      revenue += +e.amount||0;
+      cogs    += +e.cogs||0;
+      revLines[e.category||'Credit sale'] = (revLines[e.category||'Credit sale']||0) + (+e.amount||0);
+    }
+    if(e.type === 'expense' && !e.isDrawing){
+      totalExp += +e.amount||0;
+      expLines[e.category] = (expLines[e.category]||0) + (+e.amount||0);
+    }
+    if(e.type === 'asset'){
+      totalExp += +e.amount||0;
+      expLines[e.category||'Asset purchase'] = (expLines[e.category||'Asset purchase']||0) + (+e.amount||0);
+    }
+  });
+  grossProfit = revenue - cogs;
+  const netProfit = grossProfit - totalExp;
+
+  document.getElementById('report-pl').innerHTML = `
+    <div class="report-section">
+      <div class="report-header"><span class="report-title">Revenue</span><span class="report-total">${fmt(revenue)}</span></div>
+      ${Object.entries(revLines).map(([k,v])=>`<div class="report-line"><span>${k}</span><span>${fmt(v)}</span></div>`).join('')||'<div style="color:var(--muted);font-size:12px;padding:6px 12px">No revenue entries</div>'}
+      <div class="report-line subtotal"><span>Cost of goods sold</span><span style="color:var(--red)">(${fmt(cogs)})</span></div>
+      <div class="report-line subtotal"><span>Gross profit</span><span style="color:var(--green)">${fmt(grossProfit)}</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-header"><span class="report-title">Operating expenses</span><span class="report-total" style="color:var(--red)">${fmt(totalExp)}</span></div>
+      ${Object.entries(expLines).map(([k,v])=>`<div class="report-line"><span>${k}</span><span>${fmt(v)}</span></div>`).join('')||'<div style="color:var(--muted);font-size:12px;padding:6px 12px">No expense entries</div>'}
+    </div>
+    <div class="report-line ${netProfit>=0?'total':'total-neg'}"><span>Net profit / loss</span><span>${fmt(netProfit)}</span></div>`;
+
+  // ---- BALANCE SHEET ----
+  // Cumulative (all entries up to period end)
+  const allUpTo = DB.entries.filter(e => e.date <= end);
+
+  let cashAssets=0, receivables=0, stockAssets=0, fixedAssets=0;
+  let loans=0, payables=0, advances=0, gstPayable=0;
+  let capitalAdded=0, drawings=0, retainedProfit=0;
+  let cumRevenue=0, cumCogs=0, cumExp=0;
+
+  allUpTo.forEach(e => {
+    if(e.type==='income')    { cashAssets += +e.amount||0; cumRevenue += +e.amount||0; cumCogs += +e.cogs||0; }
+    if(e.type==='credit-sale') { receivables += +e.amount||0; cumRevenue += +e.amount||0; cumCogs += +e.cogs||0; }
+    if(e.type==='expense' && !e.isDrawing){ cashAssets -= +e.amount||0; cumExp += +e.amount||0; }
+    if(e.type==='expense' && e.isDrawing){ cashAssets -= +e.amount||0; drawings += +e.amount||0; }
+    if(e.type==='asset')     { cashAssets -= +e.amount||0; fixedAssets += +e.amount||0; cumExp += +e.amount||0; }
+    if(e.type==='credit-purchase') { stockAssets += +e.amount||0; payables += +e.amount||0; }
+    if(e.type==='liability' && e.subtype==='received'){ cashAssets += +e.amount||0; loans += +e.amount||0; }
+    if(e.type==='liability' && e.subtype==='repaid')  { cashAssets -= +e.amount||0; loans -= +e.amount||0; }
+  });
+
+  retainedProfit = cumRevenue - cumCogs - cumExp;
+  const totalAssets = cashAssets + receivables + stockAssets + fixedAssets;
+  const totalLiab   = loans + payables + advances;
+  const equity      = capitalAdded - drawings + retainedProfit;
+
+  document.getElementById('report-bs').innerHTML = `
+    <div class="report-section">
+      <div class="report-header"><span class="report-title" style="color:var(--blue)">Assets</span></div>
+      <div class="report-line"><span>Cash &amp; bank</span><span>${fmt(Math.max(0,cashAssets))}</span></div>
+      <div class="report-line"><span>Receivables (credit sales)</span><span>${fmt(receivables)}</span></div>
+      <div class="report-line"><span>Stock / inventory</span><span>${fmt(stockAssets)}</span></div>
+      <div class="report-line"><span>Fixed assets</span><span>${fmt(fixedAssets)}</span></div>
+      <div class="report-line subtotal"><span>Total assets</span><span>${fmt(totalAssets)}</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-header"><span class="report-title" style="color:var(--coral)">Liabilities</span></div>
+      <div class="report-line"><span>Loans outstanding</span><span>${fmt(loans)}</span></div>
+      <div class="report-line"><span>Supplier payables</span><span>${fmt(payables)}</span></div>
+      <div class="report-line subtotal"><span>Total liabilities</span><span>${fmt(totalLiab)}</span></div>
+    </div>
+    <div class="report-section">
+      <div class="report-header"><span class="report-title" style="color:var(--purple)">Owner's equity</span></div>
+      <div class="report-line"><span>Retained profit</span><span>${fmt(retainedProfit)}</span></div>
+      <div class="report-line"><span>Drawings</span><span style="color:var(--red)">(${fmt(drawings)})</span></div>
+      <div class="report-line subtotal"><span>Net equity</span><span>${fmt(equity)}</span></div>
+    </div>
+    <div class="report-line total"><span>Liabilities + Equity</span><span>${fmt(totalLiab + equity)}</span></div>`;
+}
+
+// ===================== FUND POOLS =====================
+function addFranchisee(){
+  const name  = document.getElementById('f-name').value.trim();
+  const date  = document.getElementById('f-date').value;
+  const total = parseFloat(document.getElementById('f-total').value||0);
+  const wc    = parseFloat(document.getElementById('f-wc').value||0);
+  const vc    = parseFloat(document.getElementById('f-vc').value||0);
+  const mc    = parseFloat(document.getElementById('f-mc').value||0);
+  const rm    = parseFloat(document.getElementById('f-rm').value||0);
+
+  if(!name || !date || !total){ alert('Please fill franchisee name, date, and total amount.'); return; }
+
+  const allocSum = wc + vc + mc + rm;
+  if(allocSum > total){ alert(`Allocations (${fmt(allocSum)}) exceed total deal amount (${fmt(total)}). Please check.`); return; }
+
+  DB.franchisees.push({
+    id: uid(), name, date, total,
+    alloc_Working_capital: wc,
+    alloc_Visicooler: vc,
+    alloc_Machinery: mc,
+    alloc_Raw_material: rm
+  });
+
+  ['f-name','f-date','f-total','f-wc','f-vc','f-mc','f-rm'].forEach(id => { document.getElementById(id).value = ''; });
+  showToast('Franchisee deal added');
+  renderFunds();
+}
+
+function renderFunds(){
+  const ft = getFundTotals();
+
+  // Summary cards
+  const sc = document.getElementById('fund-summary-cards');
+  sc.innerHTML = FUNDS.map(f => {
+    const d = ft[f] || { alloc:0, spent:0 };
+    const rem = d.alloc - d.spent;
+    const clr = FUND_COLORS[f];
+    return `<div class="metric ${clr}">
+      <div class="metric-label">${f}</div>
+      <div class="metric-value">${fmt(rem)}</div>
+      <div class="metric-sub">of ${fmt(d.alloc)} allocated</div>
+    </div>`;
+  }).join('');
+
+  // Franchisee list
+  const fl = document.getElementById('franchisee-list');
+  if(DB.franchisees.length === 0){ fl.innerHTML = '<div class="empty"><div class="empty-text">No franchisee deals added yet</div></div>'; return; }
+  fl.innerHTML = `<table class="tbl">
+    <thead><tr><th>Name</th><th>Date</th><th>Total</th><th>Working capital</th><th>Visicooler</th><th>Machinery</th><th>Raw material</th><th></th></tr></thead>
+    <tbody>${DB.franchisees.map(fr => `
+      <tr>
+        <td style="font-weight:500">${fr.name}</td>
+        <td>${fr.date}</td>
+        <td style="font-weight:500">${fmt(fr.total)}</td>
+        <td><span class="pill pill-green">${fmt(fr.alloc_Working_capital)}</span></td>
+        <td><span class="pill pill-blue">${fmt(fr.alloc_Visicooler)}</span></td>
+        <td><span class="pill pill-amber">${fmt(fr.alloc_Machinery)}</span></td>
+        <td><span class="pill pill-coral">${fmt(fr.alloc_Raw_material)}</span></td>
+        <td><button class="btn-icon" onclick="deleteFranchisee('${fr.id}')">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function deleteFranchisee(id){
+  if(!confirm('Remove this franchisee deal?')) return;
+  DB.masters.franchisees = DB.masters.franchisees.filter(f => f.id !== id);
+  renderFunds();
+}
+
+// ===================== MASTERS =====================
+function setMasterTab(tab, btn){
+  currentMasterTab = tab;
+  document.querySelectorAll('#page-masters .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMasters();
+}
+
+function renderMasters(){
+  const wrap = document.getElementById('master-content');
+  const tab = currentMasterTab;
+
+  if(tab === 'franchisees'){
+    wrap.innerHTML = masterListHTML('Franchisee master', 'franchisees',
+      '<input type="text" id="m-name" placeholder="Franchisee name" style="width:220px;margin-right:8px"><input type="text" id="m-phone" placeholder="Phone number" style="width:160px;margin-right:8px"><input type="text" id="m-loc" placeholder="Location / city" style="width:160px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.franchisees.push({id:uid(),name:n,phone:document.getElementById('m-phone').value,location:document.getElementById('m-loc').value}); renderMasters(); renderEntryForm(); },
+      DB.masters.franchisees.map(f => ({id:f.id, name:f.name, sub:`${f.phone||''} ${f.location?'· '+f.location:''}`})),
+      id => { DB.masters.franchisees = DB.masters.franchisees.filter(f=>f.id!==id); renderMasters(); renderEntryForm(); }
+    );
+  }
+  else if(tab === 'income-types'){
+    wrap.innerHTML = masterListHTML('Income types', 'incomeTypes',
+      '<input type="text" id="m-name" placeholder="Income type name" style="width:240px;margin-right:8px"><input type="text" id="m-desc" placeholder="Description (optional)" style="width:240px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); const d=document.getElementById('m-desc').value.trim(); if(!n) return; DB.masters.incomeTypes.push({id:uid(),name:n,desc:d}); renderMasters(); },
+      DB.masters.incomeTypes.map(t => ({id:t.id, name:t.name, sub:t.desc})),
+      id => { DB.masters.incomeTypes = DB.masters.incomeTypes.filter(t=>t.id!==id); renderMasters(); }
+    );
+  }
+  else if(tab === 'expense-types'){
+    wrap.innerHTML = masterListHTML('Expense types', 'expenseTypes',
+      '<input type="text" id="m-name" placeholder="Expense type name" style="width:240px;margin-right:8px"><input type="text" id="m-desc" placeholder="Description (optional)" style="width:240px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.expenseTypes.push({id:uid(),name:n,desc:document.getElementById('m-desc').value}); renderMasters(); },
+      DB.masters.expenseTypes.map(t => ({id:t.id, name:t.name, sub:t.desc})),
+      id => { DB.masters.expenseTypes = DB.masters.expenseTypes.filter(t=>t.id!==id); renderMasters(); }
+    );
+  }
+  else if(tab === 'asset-types'){
+    wrap.innerHTML = masterListHTML('Asset types', 'assetTypes',
+      '<input type="text" id="m-name" placeholder="Asset name" style="width:200px;margin-right:8px"><input type="number" id="m-depr" placeholder="Depreciation % per year" style="width:180px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); const d=parseFloat(document.getElementById('m-depr').value||0); if(!n) return; DB.masters.assetTypes.push({id:uid(),name:n,depr:d}); renderMasters(); },
+      DB.masters.assetTypes.map(t => ({id:t.id, name:t.name, sub:`${t.depr}% depreciation per year`})),
+      id => { DB.masters.assetTypes = DB.masters.assetTypes.filter(t=>t.id!==id); renderMasters(); }
+    );
+  }
+  else if(tab === 'liability-types'){
+    wrap.innerHTML = masterListHTML('Liability types', 'liabilityTypes',
+      '<input type="text" id="m-name" placeholder="Liability type" style="width:240px;margin-right:8px"><input type="text" id="m-desc" placeholder="Description" style="width:240px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.liabilityTypes.push({id:uid(),name:n,desc:document.getElementById('m-desc').value}); renderMasters(); },
+      DB.masters.liabilityTypes.map(t => ({id:t.id, name:t.name, sub:t.desc})),
+      id => { DB.masters.liabilityTypes = DB.masters.liabilityTypes.filter(t=>t.id!==id); renderMasters(); }
+    );
+  }
+  else if(tab === 'customers'){
+    wrap.innerHTML = masterListHTML('Customers', 'customers',
+      '<input type="text" id="m-name" placeholder="Customer name" style="width:240px;margin-right:8px"><input type="text" id="m-gstin" placeholder="GSTIN (optional)" style="width:200px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.customers.push({id:uid(),name:n,gstin:document.getElementById('m-gstin').value}); renderMasters(); },
+      DB.masters.customers.map(c => ({id:c.id, name:c.name, sub:c.gstin?`GSTIN: ${c.gstin}`:'No GSTIN'})),
+      id => { DB.masters.customers = DB.masters.customers.filter(c=>c.id!==id); renderMasters(); }
+    );
+  }
+  else if(tab === 'suppliers'){
+    wrap.innerHTML = masterListHTML('Suppliers', 'suppliers',
+      '<input type="text" id="m-name" placeholder="Supplier name" style="width:240px;margin-right:8px"><input type="text" id="m-gstin" placeholder="GSTIN (optional)" style="width:200px;margin-right:8px">',
+      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.suppliers.push({id:uid(),name:n,gstin:document.getElementById('m-gstin').value}); renderMasters(); },
+      DB.masters.suppliers.map(s => ({id:s.id, name:s.name, sub:s.gstin?`GSTIN: ${s.gstin}`:'No GSTIN'})),
+      id => { DB.masters.suppliers = DB.masters.suppliers.filter(s=>s.id!==id); renderMasters(); }
+    );
+  }
+  else if(tab === 'bank-accounts'){
+    wrap.innerHTML = masterListHTML('Bank accounts', 'bankAccounts',
+      '<input type="text" id="m-name" placeholder="Account name" style="width:200px;margin-right:8px"><select id="m-type" style="width:160px;margin-right:8px"><option>Working capital</option><option>Visicooler</option><option>Machinery</option><option>Raw material</option><option>Cash</option><option>Other</option></select>',
+      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.bankAccounts.push({id:uid(),name:n,type:document.getElementById('m-type').value,opening:0}); renderMasters(); },
+      DB.masters.bankAccounts.map(b => ({id:b.id, name:b.name, sub:`Type: ${b.type}`})),
+      id => { DB.masters.bankAccounts = DB.masters.bankAccounts.filter(b=>b.id!==id); renderMasters(); }
+    );
+  }
+}
+
+function masterListHTML(title, key, inputsHTML, onAdd, items, onDelete){
+  return `<div class="card">
+    <div class="card-title">${title}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      ${inputsHTML}
+      <button class="btn btn-primary btn-sm" onclick="(${onAdd.toString()})()">Add</button>
+    </div>
+    <div>
+      ${items.length === 0 ? '<div class="empty"><div class="empty-text">No items yet</div></div>' :
+        items.map(item => `
+          <div class="master-item">
+            <div>
+              <div class="master-item-name">${item.name}</div>
+              ${item.sub ? `<div class="master-item-sub">${item.sub}</div>` : ''}
+            </div>
+            <div class="master-actions">
+              <button class="btn-icon btn-danger" onclick="(${onDelete.toString()})('${item.id}')">✕</button>
+            </div>
+          </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ===================== TOAST =====================
+function showToast(msg){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style, { position:'fixed', bottom:'24px', right:'24px', background:'var(--green-dk)', color:'white', padding:'10px 18px', borderRadius:'8px', fontSize:'13px', fontWeight:'500', zIndex:'9999', boxShadow:'0 4px 12px rgba(0,0,0,0.15)' });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ===================== INIT =====================
+document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN',{ weekday:'long', year:'numeric', month:'long', day:'numeric' });
+// reports date inputs rendered on tab open
+renderDashboard();
+renderEntryForm();
+renderTodayEntries();
+</script>
+</body>
+</html>
