@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GAC Finance Dashboard</title>
+
+<!-- Supabase JS client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 :root {
   --green:  #1D9E75; --green-lt: #E1F5EE; --green-dk: #085041;
@@ -153,8 +157,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); }
 .date-filter label { font-size: 12px; color: var(--muted); }
 .date-filter input { width: auto; }
 
-/* RESET BANNER */
-.reset-bar { background: var(--red-lt); border-bottom: 0.5px solid var(--red); padding: 8px 20px; font-size: 12px; color: var(--red-dk); display: flex; align-items: center; justify-content: space-between; }
+/* CONNECTION STATUS */
+.conn-status { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+.conn-online  { background: var(--green-lt); color: var(--green-dk); }
+.conn-loading { background: var(--amber-lt); color: var(--amber-dk); }
+.conn-error   { background: var(--red-lt);   color: var(--red-dk); }
+
+/* LOADING OVERLAY */
+#load-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 9999; }
+.spinner { width: 34px; height: 34px; border: 3px solid var(--gray-lt); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* RESPONSIVE */
 @media(max-width:700px) {
@@ -167,13 +179,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); }
 </head>
 <body>
 
+<!-- Loading overlay while we fetch from Supabase -->
+<div id="load-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--muted)">Connecting to database…</div>
+</div>
+
 <nav class="nav">
   <div class="nav-logo">GAC Finance</div>
   <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
   <button class="nav-btn" onclick="showPage('entry')">Daily Entry</button>
   <button class="nav-btn" onclick="showPage('reports')">Reports</button>
   <button class="nav-btn" onclick="showPage('masters')">Masters</button>
-  <div style="margin-left:auto;padding:0 8px;">
+  <div style="margin-left:auto;padding:0 8px;display:flex;align-items:center;gap:10px;">
+    <span id="conn-status" class="conn-status conn-loading">● Connecting</span>
     <button class="btn btn-secondary btn-sm" onclick="confirmReset()" title="Clear all data">🗑 Reset data</button>
   </div>
 </nav>
@@ -351,96 +370,150 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); }
 </div>
 
 <script>
-// ===================== DEFAULT DATA =====================
-const DEFAULT_DB = {
-  entries: [],
-  masters: {
-    franchisees: [
-      { id:'f001', name:'Rajesh Kumar - Thiruvallur', phone:'9876543210', location:'Thiruvallur' }
-    ],
-    incomeTypes: [
-      { id:'it1', name:'Product / raw material sales', desc:'Selling raw materials to franchisees' },
-      { id:'it2', name:'Flavor royalty', desc:'Royalty on essence/flavor sales' },
-      { id:'it3', name:'Profit sharing', desc:'50-50 profit share from franchisees' },
-      { id:'it4', name:'Sales office salary reimbursement', desc:'Salary reimbursement from franchisee' },
-      { id:'it5', name:'Service income', desc:'Any service-based income' },
-      { id:'it6', name:'Other income', desc:'Miscellaneous income' }
-    ],
-    expenseTypes: [
-      { id:'et1', name:'Salary', desc:'Employee salaries and wages' },
-      { id:'et2', name:'Rent', desc:'Office / warehouse rent' },
-      { id:'et3', name:'Electricity', desc:'Electricity and utilities' },
-      { id:'et4', name:'Marketing', desc:'Marketing and promotion' },
-      { id:'et5', name:'Travel', desc:'Travel and conveyance' },
-      { id:'et6', name:'Infrastructure', desc:'Office maintenance and infrastructure' },
-      { id:'et7', name:'Other expense', desc:'Miscellaneous expenses' }
-    ],
-    assetTypes: [
-      { id:'ast1', name:'Mobile phone',     depr: 33 },
-      { id:'ast2', name:'Laptop / computer', depr: 25 },
-      { id:'ast3', name:'Vehicle',           depr: 20 },
-      { id:'ast4', name:'Machinery',         depr: 15 },
-      { id:'ast5', name:'Furniture',         depr: 10 },
-      { id:'ast6', name:'Office equipment',  depr: 20 }
-    ],
-    liabilityTypes: [
-      { id:'lt1', name:'Bank loan',       desc:'Loan from bank' },
-      { id:'lt2', name:'Director loan',   desc:'Loan from director/owner' },
-      { id:'lt3', name:'Vehicle loan',    desc:'Loan for vehicle purchase' },
-      { id:'lt4', name:'NBFC loan',       desc:'Loan from NBFC' },
-      { id:'lt5', name:'Other liability', desc:'Other liabilities' }
-    ],
-    customers: [
-      { id:'c1', name:'Walk-in / cash customer', gstin:'' }
-    ],
-    suppliers: [],
-    bankAccounts: [
-      { id:'ba1', name:'Working capital account', type:'Working capital', opening: 0 },
-      { id:'ba2', name:'Visicooler account',       type:'Visicooler',       opening: 0 },
-      { id:'ba3', name:'Machinery account',        type:'Machinery',        opening: 0 },
-      { id:'ba4', name:'Raw material account',     type:'Raw material',     opening: 0 },
-      { id:'ba5', name:'Petty cash',               type:'Cash',             opening: 0 }
-    ]
-  }
+/* ============================================================
+   1. SUPABASE CONFIG  —  PUT YOUR OWN VALUES HERE
+   ============================================================
+   - Find these in Supabase Dashboard → Project Settings → API
+   - SUPABASE_URL   = "Project URL"
+   - SUPABASE_ANON  = "anon / public" key  (NOT the service_role key)
+   The anon key is safe to keep in frontend code.
+   ============================================================ */
+const SUPABASE_URL  = "https://ufsqhqxiovzalvjbcbhp.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmc3FocXhpb3Z6YWx2amJjYmhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MzIxNjEsImV4cCI6MjA5NzUwODE2MX0.itaMb2F3-xc9hq0KRhuKGiO1TakoKh8VceSI9Qfzxa8";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const MASTERS_ROW_ID = 'singleton'; // we keep all master lists in one row
+
+// ===================== DEFAULT MASTER DATA =====================
+const DEFAULT_MASTERS = {
+  franchisees: [
+    { id:'f001', name:'Rajesh Kumar - Thiruvallur', phone:'9876543210', location:'Thiruvallur' }
+  ],
+  incomeTypes: [
+    { id:'it1', name:'Product / raw material sales', desc:'Selling raw materials to franchisees' },
+    { id:'it2', name:'Flavor royalty', desc:'Royalty on essence/flavor sales' },
+    { id:'it3', name:'Profit sharing', desc:'50-50 profit share from franchisees' },
+    { id:'it4', name:'Sales office salary reimbursement', desc:'Salary reimbursement from franchisee' },
+    { id:'it5', name:'Service income', desc:'Any service-based income' },
+    { id:'it6', name:'Other income', desc:'Miscellaneous income' }
+  ],
+  expenseTypes: [
+    { id:'et1', name:'Salary', desc:'Employee salaries and wages' },
+    { id:'et2', name:'Rent', desc:'Office / warehouse rent' },
+    { id:'et3', name:'Electricity', desc:'Electricity and utilities' },
+    { id:'et4', name:'Marketing', desc:'Marketing and promotion' },
+    { id:'et5', name:'Travel', desc:'Travel and conveyance' },
+    { id:'et6', name:'Infrastructure', desc:'Office maintenance and infrastructure' },
+    { id:'et7', name:'Other expense', desc:'Miscellaneous expenses' }
+  ],
+  assetTypes: [
+    { id:'ast1', name:'Mobile phone',      depr: 33 },
+    { id:'ast2', name:'Laptop / computer', depr: 25 },
+    { id:'ast3', name:'Vehicle',           depr: 20 },
+    { id:'ast4', name:'Machinery',         depr: 15 },
+    { id:'ast5', name:'Furniture',         depr: 10 },
+    { id:'ast6', name:'Office equipment',  depr: 20 }
+  ],
+  liabilityTypes: [
+    { id:'lt1', name:'Bank loan',       desc:'Loan from bank' },
+    { id:'lt2', name:'Director loan',   desc:'Loan from director/owner' },
+    { id:'lt3', name:'Vehicle loan',    desc:'Loan for vehicle purchase' },
+    { id:'lt4', name:'NBFC loan',       desc:'Loan from NBFC' },
+    { id:'lt5', name:'Other liability', desc:'Other liabilities' }
+  ],
+  customers: [
+    { id:'c1', name:'Walk-in / cash customer', gstin:'' }
+  ],
+  suppliers: [],
+  bankAccounts: [
+    { id:'ba1', name:'Working capital account', type:'Working capital', opening: 0 },
+    { id:'ba2', name:'Visicooler account',       type:'Visicooler',       opening: 0 },
+    { id:'ba3', name:'Machinery account',        type:'Machinery',        opening: 0 },
+    { id:'ba4', name:'Raw material account',     type:'Raw material',     opening: 0 },
+    { id:'ba5', name:'Petty cash',               type:'Cash',             opening: 0 }
+  ]
 };
 
-// ===================== LOCALSTORAGE PERSISTENCE =====================
-const STORAGE_KEY = 'gac_finance_db_v1';
+// In-memory mirror of the database. All render functions read from this.
+const DB = { entries: [], masters: JSON.parse(JSON.stringify(DEFAULT_MASTERS)) };
 
-function loadDB() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Ensure all master keys exist (in case of schema additions)
-      if (!parsed.masters) parsed.masters = DEFAULT_DB.masters;
-      if (!parsed.entries) parsed.entries = [];
-      return parsed;
-    }
-  } catch(e) {
-    console.warn('Could not load saved data, using defaults.', e);
-  }
-  return JSON.parse(JSON.stringify(DEFAULT_DB)); // deep clone defaults
+// ===================== SUPABASE DATA LAYER =====================
+function setConn(state, text){
+  const el = document.getElementById('conn-status');
+  el.className = 'conn-status ' + (state === 'online' ? 'conn-online' : state === 'error' ? 'conn-error' : 'conn-loading');
+  el.textContent = (state === 'online' ? '● ' : state === 'error' ? '● ' : '● ') + text;
 }
 
-function saveDB() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-  } catch(e) {
-    console.warn('Could not save data to localStorage.', e);
-    showToast('⚠ Could not save — storage may be full', true);
+// Load everything from Supabase into the in-memory DB
+async function loadFromDB(){
+  setConn('loading','Loading');
+
+  // ---- entries ----
+  const { data: entryRows, error: entryErr } = await sb
+    .from('gac_entries')
+    .select('id, data')
+    .order('created_at', { ascending: true });
+
+  if(entryErr) throw entryErr;
+  DB.entries = (entryRows || []).map(r => ({ ...r.data, id: r.id }));
+
+  // ---- masters (single row) ----
+  const { data: masterRow, error: masterErr } = await sb
+    .from('gac_masters')
+    .select('data')
+    .eq('id', MASTERS_ROW_ID)
+    .maybeSingle();
+
+  if(masterErr) throw masterErr;
+
+  if(masterRow && masterRow.data){
+    // merge so any newly-added default keys still appear
+    DB.masters = { ...JSON.parse(JSON.stringify(DEFAULT_MASTERS)), ...masterRow.data };
+  } else {
+    // first run — seed the masters row with defaults
+    DB.masters = JSON.parse(JSON.stringify(DEFAULT_MASTERS));
+    await sb.from('gac_masters').upsert({ id: MASTERS_ROW_ID, data: DB.masters });
   }
+
+  setConn('online','Online');
 }
 
-function confirmReset() {
-  if (confirm('⚠ This will permanently delete ALL entries and reset master data to defaults.\n\nAre you sure?')) {
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
-  }
+// Insert one entry into Supabase
+async function dbInsertEntry(entry){
+  const { id, ...rest } = entry;
+  const { error } = await sb.from('gac_entries').insert({ id, data: rest });
+  if(error){ console.error(error); showToast('⚠ Could not save to database', true); return false; }
+  return true;
 }
 
-// Load DB on startup
-const DB = loadDB();
+// Delete one entry from Supabase
+async function dbDeleteEntry(id){
+  const { error } = await sb.from('gac_entries').delete().eq('id', id);
+  if(error){ console.error(error); showToast('⚠ Could not delete from database', true); return false; }
+  return true;
+}
+
+// Save the whole masters object (single row upsert)
+async function dbSaveMasters(){
+  const { error } = await sb.from('gac_masters').upsert({ id: MASTERS_ROW_ID, data: DB.masters });
+  if(error){ console.error(error); showToast('⚠ Could not save masters', true); return false; }
+  return true;
+}
+
+// Wipe everything and reseed masters
+async function confirmReset(){
+  if(!confirm('⚠ This will permanently delete ALL entries from the shared database and reset master data to defaults.\n\nThis affects EVERY user. Are you sure?')) return;
+  setConn('loading','Resetting');
+  await sb.from('gac_entries').delete().neq('id', '___never___'); // delete all rows
+  DB.masters = JSON.parse(JSON.stringify(DEFAULT_MASTERS));
+  await dbSaveMasters();
+  DB.entries = [];
+  setConn('online','Online');
+  showToast('All data reset');
+  renderDashboard();
+  if(currentPage === 'entry') renderTodayEntries();
+}
 
 // ===================== CONSTANTS =====================
 const FUNDS = ['Working capital','Visicooler','Machinery','Raw material'];
@@ -811,7 +884,7 @@ function renderEntryForm(){
   document.getElementById('entry-form-body').innerHTML = html;
 }
 
-function saveEntry(){
+async function saveEntry(){
   const date = (document.getElementById('e-date')?.value) || today();
   const amount = parseFloat(document.getElementById('e-amount')?.value || 0);
   const gst    = parseFloat(document.getElementById('e-gst')?.value   || 0);
@@ -825,20 +898,26 @@ function saveEntry(){
     const fromF = document.getElementById('e-from-fund')?.value;
     const toF   = document.getElementById('e-to-fund')?.value;
     if(!amount || !fromF || !toF){ alert('Please fill all required fields.'); return; }
-    DB.entries.push({ id:uid(), date, type:'fund-transfer', amount, fund:fromF, toFund:toF, note, category: `Transfer: ${fromF} → ${toF}` });
-    saveDB();
-    showToast('Fund transfer recorded');
-    clearEntryForm(); renderTodayEntries(); renderDashboard(); return;
+    const entry = { id:uid(), date, type:'fund-transfer', amount, fund:fromF, toFund:toF, note, category: `Transfer: ${fromF} → ${toF}` };
+    if(await dbInsertEntry(entry)){
+      DB.entries.push(entry);
+      showToast('Fund transfer recorded');
+      clearEntryForm(); renderTodayEntries(); renderDashboard();
+    }
+    return;
   }
 
   if(currentEntryType === 'bank-transfer'){
     const fromB = document.getElementById('e-from-bank')?.value;
     const toB   = document.getElementById('e-to-bank')?.value;
     if(!amount || !fromB || !toB){ alert('Please fill all required fields.'); return; }
-    DB.entries.push({ id:uid(), date, type:'bank-transfer', amount, fromBank:fromB, toBank:toB, note, category:`${fromB} → ${toB}` });
-    saveDB();
-    showToast('Bank transfer recorded');
-    clearEntryForm(); renderTodayEntries(); renderDashboard(); return;
+    const entry = { id:uid(), date, type:'bank-transfer', amount, fromBank:fromB, toBank:toB, note, category:`${fromB} → ${toB}` };
+    if(await dbInsertEntry(entry)){
+      DB.entries.push(entry);
+      showToast('Bank transfer recorded');
+      clearEntryForm(); renderTodayEntries(); renderDashboard();
+    }
+    return;
   }
 
   if(!amount){ alert('Please enter an amount.'); return; }
@@ -860,11 +939,12 @@ function saveEntry(){
     entry.desc = document.getElementById('e-desc')?.value || '';
   }
 
-  DB.entries.push(entry);
-  saveDB(); // ← persists to localStorage
-  showToast('Entry saved successfully');
-  clearEntryForm(); renderTodayEntries();
-  if(currentPage === 'dashboard') renderDashboard();
+  if(await dbInsertEntry(entry)){
+    DB.entries.push(entry);
+    showToast('Entry saved successfully');
+    clearEntryForm(); renderTodayEntries();
+    if(currentPage === 'dashboard') renderDashboard();
+  }
 }
 
 function clearEntryForm(){ renderEntryForm(); }
@@ -890,12 +970,14 @@ function renderTodayEntries(){
     </tbody></table>`;
 }
 
-function deleteEntry(id){
+async function deleteEntry(id){
   if(!confirm('Delete this entry?')) return;
-  DB.entries = DB.entries.filter(e => e.id !== id);
-  saveDB(); // ← persists deletion
-  renderTodayEntries();
-  renderDashboard();
+  if(await dbDeleteEntry(id)){
+    DB.entries = DB.entries.filter(e => e.id !== id);
+    renderTodayEntries();
+    renderDashboard();
+    if(currentPage === 'entry-log') renderEntryLog();
+  }
 }
 
 function pillClass(type){
@@ -1147,75 +1229,99 @@ function renderMasters(){
   if(tab === 'franchisees'){
     wrap.innerHTML = masterListHTML('Franchisee master', 'franchisees',
       '<input type="text" id="m-name" placeholder="Franchisee name" style="width:220px;margin-right:8px"><input type="text" id="m-phone" placeholder="Phone number" style="width:160px;margin-right:8px"><input type="text" id="m-loc" placeholder="Location / city" style="width:160px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.franchisees.push({id:uid(),name:n,phone:document.getElementById('m-phone').value,location:document.getElementById('m-loc').value}); saveDB(); renderMasters(); renderEntryForm(); },
-      DB.masters.franchisees.map(f => ({id:f.id, name:f.name, sub:`${f.phone||''} ${f.location?'· '+f.location:''}`})),
-      id => { DB.masters.franchisees = DB.masters.franchisees.filter(f=>f.id!==id); saveDB(); renderMasters(); renderEntryForm(); }
+      'addFranchisee', 'delFranchisee',
+      DB.masters.franchisees.map(f => ({id:f.id, name:f.name, sub:`${f.phone||''} ${f.location?'· '+f.location:''}`}))
     );
   }
   else if(tab === 'income-types'){
     wrap.innerHTML = masterListHTML('Income types', 'incomeTypes',
       '<input type="text" id="m-name" placeholder="Income type name" style="width:240px;margin-right:8px"><input type="text" id="m-desc" placeholder="Description (optional)" style="width:240px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); const d=document.getElementById('m-desc').value.trim(); if(!n) return; DB.masters.incomeTypes.push({id:uid(),name:n,desc:d}); saveDB(); renderMasters(); },
-      DB.masters.incomeTypes.map(t => ({id:t.id, name:t.name, sub:t.desc})),
-      id => { DB.masters.incomeTypes = DB.masters.incomeTypes.filter(t=>t.id!==id); saveDB(); renderMasters(); }
+      'addIncomeType', 'delIncomeType',
+      DB.masters.incomeTypes.map(t => ({id:t.id, name:t.name, sub:t.desc}))
     );
   }
   else if(tab === 'expense-types'){
     wrap.innerHTML = masterListHTML('Expense types', 'expenseTypes',
       '<input type="text" id="m-name" placeholder="Expense type name" style="width:240px;margin-right:8px"><input type="text" id="m-desc" placeholder="Description (optional)" style="width:240px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.expenseTypes.push({id:uid(),name:n,desc:document.getElementById('m-desc').value}); saveDB(); renderMasters(); },
-      DB.masters.expenseTypes.map(t => ({id:t.id, name:t.name, sub:t.desc})),
-      id => { DB.masters.expenseTypes = DB.masters.expenseTypes.filter(t=>t.id!==id); saveDB(); renderMasters(); }
+      'addExpenseType', 'delExpenseType',
+      DB.masters.expenseTypes.map(t => ({id:t.id, name:t.name, sub:t.desc}))
     );
   }
   else if(tab === 'asset-types'){
     wrap.innerHTML = masterListHTML('Asset types', 'assetTypes',
       '<input type="text" id="m-name" placeholder="Asset name" style="width:200px;margin-right:8px"><input type="number" id="m-depr" placeholder="Depreciation % per year" style="width:180px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); const d=parseFloat(document.getElementById('m-depr').value||0); if(!n) return; DB.masters.assetTypes.push({id:uid(),name:n,depr:d}); saveDB(); renderMasters(); },
-      DB.masters.assetTypes.map(t => ({id:t.id, name:t.name, sub:`${t.depr}% depreciation per year`})),
-      id => { DB.masters.assetTypes = DB.masters.assetTypes.filter(t=>t.id!==id); saveDB(); renderMasters(); }
+      'addAssetType', 'delAssetType',
+      DB.masters.assetTypes.map(t => ({id:t.id, name:t.name, sub:`${t.depr}% depreciation per year`}))
     );
   }
   else if(tab === 'liability-types'){
     wrap.innerHTML = masterListHTML('Liability types', 'liabilityTypes',
       '<input type="text" id="m-name" placeholder="Liability type" style="width:240px;margin-right:8px"><input type="text" id="m-desc" placeholder="Description" style="width:240px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.liabilityTypes.push({id:uid(),name:n,desc:document.getElementById('m-desc').value}); saveDB(); renderMasters(); },
-      DB.masters.liabilityTypes.map(t => ({id:t.id, name:t.name, sub:t.desc})),
-      id => { DB.masters.liabilityTypes = DB.masters.liabilityTypes.filter(t=>t.id!==id); saveDB(); renderMasters(); }
+      'addLiabilityType', 'delLiabilityType',
+      DB.masters.liabilityTypes.map(t => ({id:t.id, name:t.name, sub:t.desc}))
     );
   }
   else if(tab === 'customers'){
     wrap.innerHTML = masterListHTML('Customers', 'customers',
       '<input type="text" id="m-name" placeholder="Customer name" style="width:240px;margin-right:8px"><input type="text" id="m-gstin" placeholder="GSTIN (optional)" style="width:200px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.customers.push({id:uid(),name:n,gstin:document.getElementById('m-gstin').value}); saveDB(); renderMasters(); },
-      DB.masters.customers.map(c => ({id:c.id, name:c.name, sub:c.gstin?`GSTIN: ${c.gstin}`:'No GSTIN'})),
-      id => { DB.masters.customers = DB.masters.customers.filter(c=>c.id!==id); saveDB(); renderMasters(); }
+      'addCustomer', 'delCustomer',
+      DB.masters.customers.map(c => ({id:c.id, name:c.name, sub:c.gstin?`GSTIN: ${c.gstin}`:'No GSTIN'}))
     );
   }
   else if(tab === 'suppliers'){
     wrap.innerHTML = masterListHTML('Suppliers', 'suppliers',
       '<input type="text" id="m-name" placeholder="Supplier name" style="width:240px;margin-right:8px"><input type="text" id="m-gstin" placeholder="GSTIN (optional)" style="width:200px;margin-right:8px">',
-      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.suppliers.push({id:uid(),name:n,gstin:document.getElementById('m-gstin').value}); saveDB(); renderMasters(); },
-      DB.masters.suppliers.map(s => ({id:s.id, name:s.name, sub:s.gstin?`GSTIN: ${s.gstin}`:'No GSTIN'})),
-      id => { DB.masters.suppliers = DB.masters.suppliers.filter(s=>s.id!==id); saveDB(); renderMasters(); }
+      'addSupplier', 'delSupplier',
+      DB.masters.suppliers.map(s => ({id:s.id, name:s.name, sub:s.gstin?`GSTIN: ${s.gstin}`:'No GSTIN'}))
     );
   }
   else if(tab === 'bank-accounts'){
     wrap.innerHTML = masterListHTML('Bank accounts', 'bankAccounts',
       '<input type="text" id="m-name" placeholder="Account name" style="width:200px;margin-right:8px"><select id="m-type" style="width:160px;margin-right:8px"><option>Working capital</option><option>Visicooler</option><option>Machinery</option><option>Raw material</option><option>Cash</option><option>Other</option></select>',
-      () => { const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.bankAccounts.push({id:uid(),name:n,type:document.getElementById('m-type').value,opening:0}); saveDB(); renderMasters(); },
-      DB.masters.bankAccounts.map(b => ({id:b.id, name:b.name, sub:`Type: ${b.type}`})),
-      id => { DB.masters.bankAccounts = DB.masters.bankAccounts.filter(b=>b.id!==id); saveDB(); renderMasters(); }
+      'addBankAccount', 'delBankAccount',
+      DB.masters.bankAccounts.map(b => ({id:b.id, name:b.name, sub:`Type: ${b.type}`}))
     );
   }
 }
 
-function masterListHTML(title, key, inputsHTML, onAdd, items, onDelete){
+// Generic helper: after mutating DB.masters, persist + re-render
+async function persistMasters(){
+  await dbSaveMasters();
+  renderMasters();
+  renderEntryForm();
+}
+
+// ---- master add/delete handlers (named functions so they survive re-render) ----
+async function addFranchisee(){ const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.franchisees.push({id:uid(),name:n,phone:document.getElementById('m-phone').value,location:document.getElementById('m-loc').value}); await persistMasters(); }
+async function delFranchisee(id){ DB.masters.franchisees = DB.masters.franchisees.filter(f=>f.id!==id); await persistMasters(); }
+
+async function addIncomeType(){ const n=document.getElementById('m-name').value.trim(); const d=document.getElementById('m-desc').value.trim(); if(!n) return; DB.masters.incomeTypes.push({id:uid(),name:n,desc:d}); await persistMasters(); }
+async function delIncomeType(id){ DB.masters.incomeTypes = DB.masters.incomeTypes.filter(t=>t.id!==id); await persistMasters(); }
+
+async function addExpenseType(){ const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.expenseTypes.push({id:uid(),name:n,desc:document.getElementById('m-desc').value}); await persistMasters(); }
+async function delExpenseType(id){ DB.masters.expenseTypes = DB.masters.expenseTypes.filter(t=>t.id!==id); await persistMasters(); }
+
+async function addAssetType(){ const n=document.getElementById('m-name').value.trim(); const d=parseFloat(document.getElementById('m-depr').value||0); if(!n) return; DB.masters.assetTypes.push({id:uid(),name:n,depr:d}); await persistMasters(); }
+async function delAssetType(id){ DB.masters.assetTypes = DB.masters.assetTypes.filter(t=>t.id!==id); await persistMasters(); }
+
+async function addLiabilityType(){ const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.liabilityTypes.push({id:uid(),name:n,desc:document.getElementById('m-desc').value}); await persistMasters(); }
+async function delLiabilityType(id){ DB.masters.liabilityTypes = DB.masters.liabilityTypes.filter(t=>t.id!==id); await persistMasters(); }
+
+async function addCustomer(){ const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.customers.push({id:uid(),name:n,gstin:document.getElementById('m-gstin').value}); await persistMasters(); }
+async function delCustomer(id){ DB.masters.customers = DB.masters.customers.filter(c=>c.id!==id); await persistMasters(); }
+
+async function addSupplier(){ const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.suppliers.push({id:uid(),name:n,gstin:document.getElementById('m-gstin').value}); await persistMasters(); }
+async function delSupplier(id){ DB.masters.suppliers = DB.masters.suppliers.filter(s=>s.id!==id); await persistMasters(); }
+
+async function addBankAccount(){ const n=document.getElementById('m-name').value.trim(); if(!n) return; DB.masters.bankAccounts.push({id:uid(),name:n,type:document.getElementById('m-type').value,opening:0}); await persistMasters(); }
+async function delBankAccount(id){ DB.masters.bankAccounts = DB.masters.bankAccounts.filter(b=>b.id!==id); await persistMasters(); }
+
+function masterListHTML(title, key, inputsHTML, addFn, delFn, items){
   return `<div class="card">
     <div class="card-title">${title}</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
       ${inputsHTML}
-      <button class="btn btn-primary btn-sm" onclick="(${onAdd.toString()})()">Add</button>
+      <button class="btn btn-primary btn-sm" onclick="${addFn}()">Add</button>
     </div>
     <div>
       ${items.length === 0 ? '<div class="empty"><div class="empty-text">No items yet</div></div>' :
@@ -1226,7 +1332,7 @@ function masterListHTML(title, key, inputsHTML, onAdd, items, onDelete){
               ${item.sub ? `<div class="master-item-sub">${item.sub}</div>` : ''}
             </div>
             <div class="master-actions">
-              <button class="btn-icon" onclick="(${onDelete.toString()})('${item.id}')">✕</button>
+              <button class="btn-icon" onclick="${delFn}('${item.id}')">✕</button>
             </div>
           </div>`).join('')}
     </div>
@@ -1241,7 +1347,7 @@ function showToast(msg, isWarn){
     position:'fixed', bottom:'24px', right:'24px',
     background: isWarn ? 'var(--amber-dk)' : 'var(--green-dk)',
     color:'white', padding:'10px 18px', borderRadius:'8px',
-    fontSize:'13px', fontWeight:'500', zIndex:'9999',
+    fontSize:'13px', fontWeight:'500', zIndex:'99999',
     boxShadow:'0 4px 12px rgba(0,0,0,0.15)'
   });
   document.body.appendChild(t);
@@ -1249,10 +1355,31 @@ function showToast(msg, isWarn){
 }
 
 // ===================== INIT =====================
-document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN',{ weekday:'long', year:'numeric', month:'long', day:'numeric' });
-renderDashboard();
-renderEntryForm();
-renderTodayEntries();
+async function init(){
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN',{ weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  if(SUPABASE_URL.includes('YOUR_SUPABASE_URL') || SUPABASE_ANON.includes('YOUR_ANON_KEY')){
+    document.getElementById('load-overlay').innerHTML =
+      '<div style="max-width:420px;text-align:center;padding:20px"><div style="font-size:15px;font-weight:600;color:var(--red-dk);margin-bottom:8px">⚠ Supabase not configured</div><div style="font-size:13px;color:var(--muted)">Open this file and replace <b>YOUR_SUPABASE_URL</b> and <b>YOUR_ANON_KEY</b> near the top of the script with your own Supabase project values, then redeploy.</div></div>';
+    setConn('error','Not configured');
+    return;
+  }
+
+  try {
+    await loadFromDB();
+    document.getElementById('load-overlay').style.display = 'none';
+    renderDashboard();
+    renderEntryForm();
+    renderTodayEntries();
+  } catch(err){
+    console.error(err);
+    setConn('error','Connection failed');
+    document.getElementById('load-overlay').innerHTML =
+      '<div style="max-width:420px;text-align:center;padding:20px"><div style="font-size:15px;font-weight:600;color:var(--red-dk);margin-bottom:8px">⚠ Could not connect to database</div><div style="font-size:13px;color:var(--muted)">Check your Supabase URL / anon key, and make sure you ran the SQL setup (tables + policies). Error: ' + (err.message || err) + '</div></div>';
+  }
+}
+
+init();
 </script>
 </body>
 </html>
